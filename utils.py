@@ -1,16 +1,23 @@
-import cv2
+from PIL import Image
+import face_recognition
 
-# Function to crop face using OpenCV's Haarcascade model
+# Function to crop face using face_recognition library
 def crop_face(frame):
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
-    if len(faces) == 0:
+    # Convert the image to RGB format
+    rgb_frame = frame.convert('RGB')
+    
+    # Convert the PIL image to a NumPy array
+    frame_array = np.array(rgb_frame)
+    
+    # Find all face locations in the image
+    face_locations = face_recognition.face_locations(frame_array)
+    
+    if len(face_locations) == 0:
         return None
 
-    (x, y, w, h) = faces[0]
-    cropped_face = frame[y:y + h, x:x + w]
+    # Use the first detected face
+    top, right, bottom, left = face_locations[0]
+    cropped_face = frame.crop((left, top, right, bottom))
     return cropped_face
 
 # Recommend songs based on detected emotions
@@ -30,4 +37,3 @@ def get_recommendations(emotion_list):
         recommendations += song_dict.get(emotion, ['Default Song'])
 
     return recommendations
-
