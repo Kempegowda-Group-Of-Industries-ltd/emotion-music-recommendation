@@ -1,58 +1,5 @@
 import streamlit as st
-import cv2
-import numpy as np
-from model import predict_emotion
-from utils import crop_face, get_recommendations
-
-# Streamlit app setup
-st.title("Emotion-Based Music Recommendation System")
-
-# Initialize the camera feed
-run = st.checkbox('Start Camera')
-FRAME_WINDOW = st.image([])
-
-camera = cv2.VideoCapture(0)
-
-if run:
-    emotion_list = []
-
-    while run:
-        _, frame = camera.read()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Detect and crop the face
-        cropped_face = crop_face(frame)
-        
-        if cropped_face is not None:
-            # Predict emotion for the cropped face
-            emotion = predict_emotion(cropped_face)
-            emotion_list.append(emotion)
-        
-        FRAME_WINDOW.image(frame)
-
-        if len(emotion_list) >= 40:  # Process for 40 frames
-            break
-
-    # Post-processing of emotions
-    st.write("Detected Emotions: ", emotion_list)
-    
-    # Sort emotions by frequency and remove duplicates
-    unique_emotions = sorted(set(emotion_list), key=lambda x: emotion_list.count(x), reverse=True)
-    st.write("Final Emotions: ", unique_emotions)
-
-    # Recommend songs based on emotions
-    recommendations = get_recommendations(unique_emotions)
-    st.write("Recommended Songs: ", recommendations)
-else:
-    st.write('Stopped')
-
-
-
-
-
-
-import streamlit as st
-import cv2
+from PIL import Image
 import numpy as np
 from model import predict_emotion
 from utils import crop_face, get_recommendations
@@ -71,10 +18,25 @@ st.sidebar.write("Use this control panel to start and stop the camera.")
 # Add a button to start/stop the camera
 run = st.sidebar.checkbox('Start Camera')
 
-# Placeholder to display video frame from camera
+# Placeholder to display image frame from camera
 FRAME_WINDOW = st.image([])
 
-camera = cv2.VideoCapture(0)
+# Import necessary modules for webcam access
+from io import BytesIO
+import requests
+
+# Dummy webcam URL for demonstration purposes
+WEBCAM_URL = "http://your-webcam-url.com/latest.jpg"
+
+# Function to simulate capturing image from webcam
+def capture_frame():
+    try:
+        response = requests.get(WEBCAM_URL)
+        img = Image.open(BytesIO(response.content))
+        return img
+    except:
+        st.error("Failed to access the webcam.")
+        return None
 
 # Define the structure of the page (columns for a clean UI)
 col1, col2 = st.columns(2)
@@ -92,23 +54,26 @@ emotion_list = []
 if run:
     with col1:
         while run:
-            # Capture frame from camera
-            _, frame = camera.read()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Capture frame from simulated webcam
+            img = capture_frame()
             
-            # Detect and crop face
-            cropped_face = crop_face(frame)
-            
-            if cropped_face is not None:
-                # Predict emotion from cropped face
-                emotion = predict_emotion(cropped_face)
-                emotion_list.append(emotion)
+            if img:
+                img = img.convert('RGB')  # Ensure image is in RGB mode
+                frame = np.array(img)  # Convert image to numpy array
 
-            # Display video feed in UI
-            FRAME_WINDOW.image(frame)
+                # Detect and crop face
+                cropped_face = crop_face(frame)
 
-            if len(emotion_list) >= 40:
-                break
+                if cropped_face is not None:
+                    # Predict emotion for the cropped face
+                    emotion = predict_emotion(cropped_face)
+                    emotion_list.append(emotion)
+
+                # Display image feed in UI
+                FRAME_WINDOW.image(img)
+
+                if len(emotion_list) >= 40:
+                    break
     
     with col2:
         # Display detected emotions
@@ -126,7 +91,3 @@ if run:
 
 else:
     st.write('Camera is turned off.')
-
-# Release the camera when stopping
-if not run:
-    camera.release()
